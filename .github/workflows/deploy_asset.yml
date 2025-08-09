@@ -1,0 +1,37 @@
+name: Deploy assets.goldenwin.vn
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}   # có nút Run workflow
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Upload TẤT CẢ file ở root repo lên thẳng webroot
+      - name: Upload to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 31.97.188.40
+          username: goldenwin-assets
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "."                          # đơn giản: copy toàn bộ
+          target: "/home/goldenwin-assets/htdocs/assets.goldenwin.vn"
+          strip_components: 0
+          overwrite: true
+
+      # Dọn rác CI & set quyền đọc cho Nginx
+      - name: Clean & fix perms
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: 31.97.188.40
+          username: goldenwin-assets
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            rm -rf /home/goldenwin-assets/htdocs/assets.goldenwin.vn/.git \
+                   /home/goldenwin-assets/htdocs/assets.goldenwin.vn/.github || true
+            find /home/goldenwin-assets/htdocs/assets.goldenwin.vn -type d -exec chmod 755 {} \;
+            find /home/goldenwin-assets/htdocs/assets.goldenwin.vn -type f -exec chmod 644 {} \;
